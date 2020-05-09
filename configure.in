@@ -56,12 +56,38 @@ else
 fi
 AC_CHECK_PROGS(WINDRES, [windres $hostaliaswindres $host_os-windres])
 
+MIKMOD_PATH=$PATH
+
+dnl Check for a valid PSPSDK installation
+CheckPSPSDK()
+{
+    AC_CHECK_PROG(psp_config, psp-config, psp-config, no)
+    if test x$psp_config = xno; then
+        AC_MSG_ERROR(Couldn't locate psp-config.)
+    fi
+
+    AC_MSG_CHECKING(for PSPSDK)
+    pspsdk_path=`$psp_config --pspsdk-path`
+    if test ! -d $pspsdk_path -o -z $pspsdk_path; then
+        AC_MSG_RESULT(not found)
+        AC_MSG_ERROR(Couldn't locate PSPSDK.)
+    fi
+    AC_MSG_RESULT($pspsdk_path)
+
+    # Compile SDL with -G0 to disable the $gp register.
+    CFLAGS="$CFLAGS -G0 -I\"${pspsdk_path}/include\""
+    MIKMOD_PATH=`$psp_config --psp-prefix`/bin
+}
+
 dnl Set up the compiler and linker flags
 case "$host" in
     *-*-cygwin*)
         # We build SDL on cygwin without the UNIX emulation layer
         BASE_CFLAGS="-I/usr/include/mingw -mno-cygwin"
         BASE_LDFLAGS="-mno-cygwin"
+        ;;
+    *-psp-*)
+        CheckPSPSDK
         ;;
     *)
         BASE_CFLAGS="-D_GNU_SOURCE=1"
@@ -293,7 +319,7 @@ if test x$enable_music_mod = xyes -a x$enable_music_mod_mikmod = xyes; then
     libmikmod_ver="$libmikmod_maj.$libmikmod_min.$libmikmod_rev"
     CFLAGS_SAVED="$CFLAGS"
     LIBS_SAVED="$LIBS"
-    AC_PATH_PROG(LIBMIKMOD_CONFIG, libmikmod-config, no, [$PATH])
+    AC_PATH_PROG(LIBMIKMOD_CONFIG, libmikmod-config, no, [$MIKMOD_PATH])
     if test "$LIBMIKMOD_CONFIG" != "no" ; then
         CFLAGS="$CFLAGS `$LIBMIKMOD_CONFIG --cflags`"
         LIBS="$LIBS `$LIBMIKMOD_CONFIG --libs`"
@@ -715,7 +741,10 @@ VERSION_DEPENDS=`echo "$VERSION_DEPENDS" | sed 's,\([[^ ]]*\)/\([[^ ]]*\)\.rc,\\
 $(objects)/\2.o: \1/\2.rc\\
 	\$(WINDRES) \$< \$@,g'`
 VERSION_DEPENDS=`echo "$VERSION_DEPENDS" | sed 's,\\$,\\\\$,g'`
-
+case "$host" in
+	*-psp-*)
+	;;
+	*)
 PLAYWAVE_SOURCES="$srcdir/playwave.c"
 PLAYWAVE_OBJECTS=`echo $PLAYWAVE_SOURCES`
 PLAYWAVE_DEPENDS=`echo $PLAYWAVE_SOURCES`
@@ -733,13 +762,20 @@ PLAYMUS_DEPENDS=`echo "$PLAYMUS_DEPENDS" | sed 's,\([[^ ]]*\)/\([[^ ]]*\)\.c,\\
 $(objects)/\2.lo: \1/\2.c\\
 	\$(LIBTOOL) --mode=compile \$(CC) \$(CFLAGS) \$(EXTRA_CFLAGS) '"$DEPENDENCY_TRACKING_OPTIONS"' -c \$< -o \$@,g'`
 PLAYMUS_DEPENDS=`echo "$PLAYMUS_DEPENDS" | sed 's,\\$,\\\\$,g'`
-
+;;
+esac
 dnl Expand the sources and objects needed to build the library
 AC_SUBST(ac_aux_dir)
 AC_SUBST(OBJECTS)
 AC_SUBST(VERSION_OBJECTS)
+case "$host" in
+	*-psp-*)
+	;;
+	*)
 AC_SUBST(PLAYWAVE_OBJECTS)
 AC_SUBST(PLAYMUS_OBJECTS)
+	;;
+esac
 AC_SUBST(BUILD_CFLAGS)
 AC_SUBST(EXTRA_CFLAGS)
 AC_SUBST(BUILD_LDFLAGS)
