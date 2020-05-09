@@ -29,6 +29,12 @@
 #if defined(__linux__) && defined(__arm__)
 # include <linux/limits.h>
 #endif
+
+// PSP fix
+#ifndef PATH_MAX
+# define PATH_MAX 255
+#endif
+
 typedef struct {
 	char file[PATH_MAX];
 	char cmd[PATH_MAX];
