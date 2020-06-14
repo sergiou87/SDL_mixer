@@ -105,7 +105,7 @@ SDL_AudioSpec *Mix_LoadOGG_RW (SDL_RWops *src, int freesrc,
     *audio_len = 0;
     memset(spec, '\0', sizeof (SDL_AudioSpec));
 
-    spec->format = AUDIO_S16;
+    spec->format = AUDIO_S16SYS;
     spec->channels = info->channels;
     spec->freq = info->rate;
     spec->samples = 4096; /* buffer size */
@@ -124,9 +124,9 @@ SDL_AudioSpec *Mix_LoadOGG_RW (SDL_RWops *src, int freesrc,
 	 read > 0;
 	 read = vorbis.ov_read(&vf, (char *)buf, to_read, &bitstream))
 #else
-    for (read = vorbis.ov_read(&vf, (char *)buf, to_read, 0/*LE*/, 2/*16bit*/, 1/*signed*/, &bitstream);
+    for (read = vorbis.ov_read(&vf, (char *)buf, to_read, SDL_BYTEORDER == SDL_BIG_ENDIAN/*BE?*/, 2/*16bit*/, 1/*signed*/, &bitstream);
          read > 0;
-         read = vorbis.ov_read(&vf, (char *)buf, to_read, 0, 2, 1, &bitstream))
+         read = vorbis.ov_read(&vf, (char *)buf, to_read, SDL_BYTEORDER == SDL_BIG_ENDIAN, 2, 1, &bitstream))
 #endif	 
     {
         if (read == OV_HOLE || read == OV_EBADLINK)
